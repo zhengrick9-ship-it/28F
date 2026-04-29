@@ -10,8 +10,30 @@ function d(year, month, day) {
   return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
+function macroProfile(category) {
+  const profiles = {
+    '粥品': { protein: 2, carbs: 11, fat: 0.6 },
+    '饮品': { protein: 3, carbs: 5, fat: 2.2 },
+    '汤品': { protein: 3, carbs: 3, fat: 2 },
+    '水果': { protein: 0.8, carbs: 12, fat: 0.3 },
+    '小吃': { protein: 5, carbs: 36, fat: 9 },
+    '蛋类': { protein: 12, carbs: 2, fat: 10 },
+    '粗粮': { protein: 2.5, carbs: 22, fat: 0.8 },
+    '养生蔬菜': { protein: 2, carbs: 7, fat: 2.2 },
+    '素菜': { protein: 2.5, carbs: 8, fat: 3 },
+    '西点': { protein: 6, carbs: 45, fat: 14 },
+    '主食': { protein: 6, carbs: 42, fat: 4 },
+    '面食': { protein: 5, carbs: 28, fat: 3 },
+    '堂烹面臊': { protein: 12, carbs: 6, fat: 14 },
+    '特色套餐': { protein: 11, carbs: 18, fat: 9 },
+    '特色菜': { protein: 13, carbs: 8, fat: 10 },
+    '荤菜': { protein: 14, carbs: 6, fat: 12 }
+  };
+  return profiles[category] || { protein: 5, carbs: 15, fat: 5 };
+}
+
 function dish(id, name, category, kcalPer100g) {
-  return { id, name, category, kcalPer100g };
+  return { id, name, category, kcalPer100g, macrosPer100g: macroProfile(category) };
 }
 
 // Week 1: 2026-04-20 to 2026-04-24
@@ -559,5 +581,6 @@ module.exports = {
   weekdayLabels,
   weeks,
   getDefaultGrams,
-  getCategoryType
+  getCategoryType,
+  macroProfile
 };

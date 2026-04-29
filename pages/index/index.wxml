@@ -1,7 +1,6 @@
 <view class="page">
   <view class="header">
     <view class="header-left">
-      <text class="eyebrow">{{cloudStatus}}</text>
       <text class="header-title">先吃饭吧</text>
       <text class="header-sub">{{weekRangeText}}</text>
     </view>
@@ -56,23 +55,37 @@
   <view wx:if="{{recommendation}}" class="recommendation-card">
     <view class="card-header">
       <text class="card-title">推荐搭配</text>
+      <text class="card-source">{{recommendation.source}}</text>
     </view>
+    <view wx:if="{{recommendation.reason}}" class="rec-reason">{{recommendation.reason}}</view>
     <view class="rec-list">
       <view wx:for="{{recommendation.dishes}}" wx:key="id" class="rec-item">
-        <text class="rec-name">{{item.name}}</text>
+        <view class="rec-main">
+          <text class="rec-name">{{item.name}}</text>
+          <view class="macro-row">
+            <text class="macro protein">蛋白 {{item.protein}}g</text>
+            <text class="macro carbs">碳水 {{item.carbs}}g</text>
+            <text class="macro fat">脂肪 {{item.fat}}g</text>
+          </view>
+        </view>
         <text class="rec-meta">{{item.grams}}g / {{item.calories}}千卡</text>
       </view>
       <view wx:if="{{recommendation.dishes.length == 0}}" class="rec-empty">暂无推荐</view>
     </view>
     <view wx:if="{{recommendation.dishes.length > 0}}" class="rec-total">
-      合计约 <text class="rec-total-num">{{recommendation.totalCalories}}</text> 千卡
+      <view>合计约 <text class="rec-total-num">{{recommendation.totalCalories}}</text> 千卡</view>
+      <view class="macro-row total">
+        <text class="macro protein">蛋白 {{recommendation.totalProtein}}g</text>
+        <text class="macro carbs">碳水 {{recommendation.totalCarbs}}g</text>
+        <text class="macro fat">脂肪 {{recommendation.totalFat}}g</text>
+      </view>
     </view>
   </view>
 
   <view class="menu-card">
     <view class="menu-head">
       <text class="menu-title">菜单</text>
-      <text class="menu-meta">热量为估算值</text>
+      <text class="menu-meta">每100g</text>
     </view>
     <block wx:if="{{groupedDishes.length == 0}}">
       <view class="empty-state">当日该餐次暂无菜单数据</view>
@@ -84,8 +97,15 @@
           <view class="dish-main" bindtap="toggleDish" data-dish-id="{{item.id}}">
             <view class="checkbox {{item.selected ? 'checked' : ''}}"></view>
             <view class="dish-text">
-              <text class="dish-name">{{item.name}}</text>
-              <text class="dish-cal">{{item.kcalPer100g}} 千卡/100g（估算）</text>
+              <view class="dish-title-row">
+                <text class="dish-name">{{item.name}}</text>
+                <text class="dish-cal-inline">{{item.kcalPer100g}}千卡/100g</text>
+              </view>
+              <view class="macro-row">
+                <text class="macro protein">蛋白 {{item.macrosPer100g.protein}}g</text>
+                <text class="macro carbs">碳水 {{item.macrosPer100g.carbs}}g</text>
+                <text class="macro fat">脂肪 {{item.macrosPer100g.fat}}g</text>
+              </view>
             </view>
           </view>
           <view class="dish-controls">
@@ -121,6 +141,11 @@
       <view class="summary-col">
         <text class="summary-num">{{totalCalories}}</text>
         <text class="summary-label">千卡</text>
+      </view>
+      <view class="summary-macros macro-row">
+        <text class="macro protein">蛋白 {{totalProtein}}g</text>
+        <text class="macro carbs">碳水 {{totalCarbs}}g</text>
+        <text class="macro fat">脂肪 {{totalFat}}g</text>
       </view>
       <view class="summary-actions">
         <view class="clear-btn" bindtap="clearSelections" wx:if="{{totalItems > 0}}">清空</view>

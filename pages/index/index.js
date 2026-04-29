@@ -11,6 +11,13 @@ const mealTabs = [
   { key: 'dinner', label: '晚餐' }
 ];
 
+const recommendModes = [
+  { key: 'balanced', label: '均衡' },
+  { key: 'lowCal', label: '低卡' },
+  { key: 'highProtein', label: '高蛋白' },
+  { key: 'random', label: '随机' }
+];
+
 const PREFERRED_CATEGORY_ORDER = [
   '粥品', '主食', '西点', '蛋类', '养生蔬菜', '粗粮', '饮品',
   '堂烹面臊', '面食', '特色菜', '荤菜', '素菜', '水果', '小吃', '汤品', '特色套餐'
@@ -28,6 +35,17 @@ function formatDateKey(date) {
   return `${year}-${month}-${day}`;
 }
 
+function calcNutrition(dish, grams) {
+  const amount = Number(grams) || 0;
+  const macros = dish.macrosPer100g || {};
+  return {
+    calories: Math.round((amount * dish.kcalPer100g) / 100),
+    protein: Math.round(((amount * (macros.protein || 0)) / 100) * 10) / 10,
+    carbs: Math.round(((amount * (macros.carbs || 0)) / 100) * 10) / 10,
+    fat: Math.round(((amount * (macros.fat || 0)) / 100) * 10) / 10
+  };
+}
+
 Page({
   data: {
     weekOptions: [],
@@ -39,12 +57,17 @@ Page({
     selectedDayIndex: 0,
     mealTabs,
     selectedMeal: 'breakfast',
+    recommendModes,
+    selectedRecommendMode: 'balanced',
     groupedDishes: [],
     selections: {},
     selectedItems: [],
     totalItems: 0,
     totalGrams: 0,
     totalCalories: 0,
+    totalProtein: 0,
+    totalCarbs: 0,
+    totalFat: 0,
     recommendation: null,
     notice: '',
     weekRangeText: '',
@@ -257,25 +280,32 @@ Page({
         const sel = selections[dish.id];
         if (sel && sel.selected) {
           const grams = Number(sel.grams) || 0;
-          const calories = Math.round((grams * dish.kcalPer100g) / 100);
+          const nutrition = calcNutrition(dish, grams);
           selectedItems.push({
             id: dish.id,
             name: dish.name,
             mealLabel: mealLabels[mealKey],
             grams,
-            calories
+            ...nutrition
           });
           totalGrams += grams;
-          totalCalories += calories;
+          totalCalories += nutrition.calories;
         }
       });
     });
+
+    const totalProtein = selectedItems.reduce((sum, item) => sum + item.protein, 0);
+    const totalCarbs = selectedItems.reduce((sum, item) => sum + item.carbs, 0);
+    const totalFat = selectedItems.reduce((sum, item) => sum + item.fat, 0);
 
     this.setData({
       selectedItems,
       totalItems: selectedItems.length,
       totalGrams,
-      totalCalories
+      totalCalories,
+      totalProtein: Math.round(totalProtein * 10) / 10,
+      totalCarbs: Math.round(totalCarbs * 10) / 10,
+      totalFat: Math.round(totalFat * 10) / 10
     });
   },
 
@@ -305,6 +335,12 @@ Page({
     if (key === this.data.selectedMeal) return;
     this.setData({ selectedMeal: key, recommendation: null });
     this.updateMealDisplay();
+  },
+
+  selectRecommendMode(e) {
+    const key = e.currentTarget.dataset.key;
+    if (key === this.data.selectedRecommendMode) return;
+    this.setData({ selectedRecommendMode: key, recommendation: null });
   },
 
   goToday() {
@@ -401,6 +437,19 @@ Page({
   },
 
   recommendMeal() {
+    const labels = this.data.recommendModes.map(item => item.label);
+    wx.showActionSheet({
+      itemList: labels,
+      success: res => {
+        const mode = this.data.recommendModes[res.tapIndex];
+        if (!mode) return;
+        this.setData({ selectedRecommendMode: mode.key, recommendation: null });
+        this.runRecommendation();
+      }
+    });
+  },
+
+  runRecommendation() {
     const weeks = this.data.menuWeeks;
     const week = weeks[this.data.selectedWeekIndex];
     const day = week.days[this.data.selectedDayIndex];
@@ -409,6 +458,45 @@ Page({
 
     if (!dishes || dishes.length === 0) {
       this.setData({ recommendation: { dishes: [], totalCalories: 0 } });
+      return;
+    }
+
+    wx.showLoading({ title: '推荐中' });
+    if (wx.cloud && wx.cloud.callFunction) {
+      wx.cloud.callFunction({
+        name: 'recommendMeal',
+        data: {
+          mode: this.data.selectedRecommendMode,
+          mealKey,
+          mealLabel: mealLabels[mealKey],
+          date: day.date,
+          weekday: day.weekday,
+          dishes
+        }
+      }).then(res => {
+        const result = res && res.result ? res.result : {};
+        if (result.ok && Array.isArray(result.dishIds) && result.dishIds.length > 0) {
+          this.applyRecommendationByIds(dishes, result.dishIds, result.reason || '按当前菜单生成推荐', result.source || 'ai');
+        } else {
+          this.recommendMealLocally(dishes, '本地推荐');
+        }
+      }).catch(() => {
+        this.recommendMealLocally(dishes, '本地推荐');
+      }).finally(() => {
+        wx.hideLoading();
+      });
+      return;
+    }
+
+    this.recommendMealLocally(dishes, '本地推荐');
+    wx.hideLoading();
+  },
+
+  recommendMealLocally(dishes, source) {
+    const mode = this.data.selectedRecommendMode;
+    if (mode === 'random') {
+      const shuffled = dishes.slice().sort(() => Math.random() - 0.5);
+      this.applyRecommendation(shuffled.slice(0, Math.min(4, Math.max(2, shuffled.length))), source || '本地推荐');
       return;
     }
 
@@ -421,9 +509,14 @@ Page({
     const pickOne = (arr) => arr.length ? arr[Math.floor(Math.random() * arr.length)] : null;
     const picked = [];
 
-    const staple = pickOne(byType.staple);
-    const protein = pickOne(byType.protein);
-    const vegetable = pickOne(byType.vegetable);
+    const byCalories = item => item.kcalPer100g;
+    const byProtein = item => -((item.macrosPer100g && item.macrosPer100g.protein) || 0);
+    const staplePool = mode === 'lowCal' ? byType.staple.slice().sort((a, b) => byCalories(a) - byCalories(b)).slice(0, 2) : byType.staple;
+    const proteinPool = mode === 'highProtein' ? byType.protein.slice().sort((a, b) => byProtein(a) - byProtein(b)).slice(0, 3) : byType.protein;
+    const vegetablePool = byType.vegetable;
+    const staple = mode === 'random' ? null : pickOne(staplePool);
+    const protein = pickOne(proteinPool);
+    const vegetable = pickOne(vegetablePool);
 
     if (staple) picked.push(staple);
     if (protein) picked.push(protein);
@@ -434,18 +527,41 @@ Page({
       picked.push(pickOne(allRemaining));
     }
 
+    if (mode === 'lowCal') {
+      picked.sort((a, b) => a.kcalPer100g - b.kcalPer100g);
+      picked.splice(3);
+    }
+
+    this.applyRecommendation(picked, source || '本地推荐');
+  },
+
+  applyRecommendationByIds(dishes, dishIds, reason, source) {
+    const picked = dishIds
+      .map(id => dishes.find(dish => dish.id === id))
+      .filter(Boolean);
+    this.applyRecommendation(picked.length > 0 ? picked : dishes.slice(0, 3), source || 'ai', reason);
+  },
+
+  applyRecommendation(picked, source, reason) {
     const recommendationDishes = picked.map(dish => {
       const grams = getDefaultGrams(dish.category);
-      const calories = Math.round((grams * dish.kcalPer100g) / 100);
-      return { ...dish, grams, calories };
+      return { ...dish, grams, ...calcNutrition(dish, grams) };
     });
 
     const totalCalories = recommendationDishes.reduce((s, d) => s + d.calories, 0);
+    const totalProtein = recommendationDishes.reduce((s, d) => s + d.protein, 0);
+    const totalCarbs = recommendationDishes.reduce((s, d) => s + d.carbs, 0);
+    const totalFat = recommendationDishes.reduce((s, d) => s + d.fat, 0);
 
     this.setData({
       recommendation: {
         dishes: recommendationDishes,
-        totalCalories
+        totalCalories,
+        totalProtein: Math.round(totalProtein * 10) / 10,
+        totalCarbs: Math.round(totalCarbs * 10) / 10,
+        totalFat: Math.round(totalFat * 10) / 10,
+        source,
+        reason: reason || '按餐次、主食、蛋白和蔬菜做搭配'
       }
     });
   },
