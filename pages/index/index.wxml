@@ -99,13 +99,14 @@
             <view class="dish-text">
               <text class="dish-name">{{item.name}}</text>
               <view class="macro-row">
-                <text class="macro calories">{{item.kcalPer100g}}千卡/100g</text>
+                <text class="macro calories">{{item.kcalPer100g}}千卡</text>
                 <text class="macro-sep">|</text>
-                <text class="macro protein">蛋白{{item.macrosPer100g.protein}}g</text>
+                <text class="macro protein">{{item.macrosPer100g.protein}}</text>
                 <text class="macro-sep">|</text>
-                <text class="macro carbs">碳水{{item.macrosPer100g.carbs}}g</text>
+                <text class="macro carbs">{{item.macrosPer100g.carbs}}</text>
                 <text class="macro-sep">|</text>
-                <text class="macro fat">脂肪{{item.macrosPer100g.fat}}g</text>
+                <text class="macro fat">{{item.macrosPer100g.fat}}</text>
+                <text class="macro-unit">/100g</text>
               </view>
             </view>
           </view>

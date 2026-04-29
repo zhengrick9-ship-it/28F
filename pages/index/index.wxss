@@ -425,6 +425,14 @@ page {
   line-height: 1;
 }
 
+.macro-unit {
+  color: #8e8e93;
+  font-size: 20rpx;
+  font-weight: 650;
+  line-height: 1;
+  white-space: nowrap;
+}
+
 .macro.protein {
   color: #007aff;
 }
