@@ -1,0 +1,135 @@
+<view class="page">
+  <view class="header">
+    <view class="header-left">
+      <text class="eyebrow">{{cloudStatus}}</text>
+      <text class="header-title">先吃饭吧</text>
+      <text class="header-sub">{{weekRangeText}}</text>
+    </view>
+    <view class="header-actions">
+      <view class="action-btn" bindtap="goToday">今日</view>
+      <view class="action-btn" bindtap="previewMenuImages">实拍菜谱</view>
+      <view class="action-btn primary" bindtap="recommendMeal">帮我推荐</view>
+    </view>
+  </view>
+
+  <view wx:if="{{notice}}" class="notice-bar">
+    <text class="notice-text">{{notice}}</text>
+  </view>
+
+  <picker mode="selector" range="{{weekOptions}}" value="{{selectedWeekIndex}}" bindchange="onWeekPickerChange">
+    <view class="week-select">
+      <view class="week-select-left">
+        <text class="week-select-label">日期</text>
+        <text class="week-select-value">{{selectedWeekLabel}}</text>
+      </view>
+      <text class="week-select-action">选择</text>
+    </view>
+  </picker>
+
+  <view class="day-strip">
+    <scroll-view scroll-x class="day-scroll" enhanced show-scrollbar="{{false}}">
+      <view class="day-tabs">
+        <view
+          wx:for="{{dayTabs}}"
+          wx:key="date"
+          class="day-tab {{selectedDayIndex == index ? 'active' : ''}}"
+          data-index="{{index}}"
+          bindtap="selectDay"
+        >
+          <text class="day-weekday">{{item.weekday}}</text>
+          <text class="day-date">{{item.date}}</text>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <view class="meal-tabs">
+    <view
+      wx:for="{{mealTabs}}"
+      wx:key="key"
+      class="meal-tab {{selectedMeal == item.key ? 'active' : ''}}"
+      data-key="{{item.key}}"
+      bindtap="selectMeal"
+    >{{item.label}}</view>
+  </view>
+
+  <view wx:if="{{recommendation}}" class="recommendation-card">
+    <view class="card-header">
+      <text class="card-title">推荐搭配</text>
+    </view>
+    <view class="rec-list">
+      <view wx:for="{{recommendation.dishes}}" wx:key="id" class="rec-item">
+        <text class="rec-name">{{item.name}}</text>
+        <text class="rec-meta">{{item.grams}}g / {{item.calories}}千卡</text>
+      </view>
+      <view wx:if="{{recommendation.dishes.length == 0}}" class="rec-empty">暂无推荐</view>
+    </view>
+    <view wx:if="{{recommendation.dishes.length > 0}}" class="rec-total">
+      合计约 <text class="rec-total-num">{{recommendation.totalCalories}}</text> 千卡
+    </view>
+  </view>
+
+  <view class="menu-card">
+    <view class="menu-head">
+      <text class="menu-title">菜单</text>
+      <text class="menu-meta">热量为估算值</text>
+    </view>
+    <block wx:if="{{groupedDishes.length == 0}}">
+      <view class="empty-state">当日该餐次暂无菜单数据</view>
+    </block>
+    <block wx:for="{{groupedDishes}}" wx:key="category" wx:for-item="group">
+      <view class="category-title">{{group.category}}</view>
+      <view class="dish-list">
+        <view wx:for="{{group.dishes}}" wx:key="id" class="dish-row">
+          <view class="dish-main" bindtap="toggleDish" data-dish-id="{{item.id}}">
+            <view class="checkbox {{item.selected ? 'checked' : ''}}"></view>
+            <view class="dish-text">
+              <text class="dish-name">{{item.name}}</text>
+              <text class="dish-cal">{{item.kcalPer100g}} 千卡/100g（估算）</text>
+            </view>
+          </view>
+          <view class="dish-controls">
+            <view class="stepper" data-dish-id="{{item.id}}" data-delta="-10" bindtap="stepGrams">-</view>
+            <input
+              class="grams-input"
+              type="number"
+              value="{{item.grams}}"
+              data-dish-id="{{item.id}}"
+              bindinput="updateGrams"
+              placeholder="0"
+            />
+            <view class="stepper" data-dish-id="{{item.id}}" data-delta="10" bindtap="stepGrams">+</view>
+            <text class="unit">g</text>
+          </view>
+        </view>
+      </view>
+    </block>
+  </view>
+
+  <view class="summary-spacer"></view>
+
+  <view class="summary-bar">
+    <view class="summary-main">
+      <view class="summary-col">
+        <text class="summary-num">{{totalItems}}</text>
+        <text class="summary-label">已选</text>
+      </view>
+      <view class="summary-col">
+        <text class="summary-num">{{totalGrams}}</text>
+        <text class="summary-label">克数</text>
+      </view>
+      <view class="summary-col">
+        <text class="summary-num">{{totalCalories}}</text>
+        <text class="summary-label">千卡</text>
+      </view>
+      <view class="summary-actions">
+        <view class="clear-btn" bindtap="clearSelections" wx:if="{{totalItems > 0}}">清空</view>
+      </view>
+    </view>
+    <view wx:if="{{selectedItems.length > 0}}" class="summary-detail">
+      <view wx:for="{{selectedItems}}" wx:key="id" class="detail-row">
+        <text class="detail-text">{{item.mealLabel}} · {{item.name}} {{item.grams}}g = {{item.calories}}千卡</text>
+      </view>
+    </view>
+  </view>
+</view>
