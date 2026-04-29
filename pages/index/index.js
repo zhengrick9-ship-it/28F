@@ -46,6 +46,24 @@ function calcNutrition(dish, grams) {
   };
 }
 
+function hasUsableNutritionMeta(menuWeeks) {
+  let total = 0;
+  let withMeta = 0;
+
+  (menuWeeks || []).forEach(week => {
+    (week.days || []).forEach(day => {
+      Object.keys(day.meals || {}).forEach(mealKey => {
+        (day.meals[mealKey] || []).forEach(dish => {
+          total += 1;
+          if (dish.nutritionMeta && dish.nutritionMeta.source) withMeta += 1;
+        });
+      });
+    });
+  });
+
+  return total > 0 && withMeta / total > 0.8;
+}
+
 Page({
   data: {
     weekOptions: [],
@@ -131,7 +149,11 @@ Page({
       const result = res && res.result ? res.result : {};
       const remoteWeeks = result.weeks;
       if (Array.isArray(remoteWeeks) && remoteWeeks.length > 0) {
-        this.initWeeks(remoteWeeks, '已同步云端菜单');
+        if (result.nutritionSource || hasUsableNutritionMeta(remoteWeeks)) {
+          this.initWeeks(remoteWeeks, '已同步云端菜单');
+        } else {
+          this.setData({ cloudStatus: '云端菜单营养数据较旧，使用本地菜单' });
+        }
       }
       this.loadCloudMenuImages(result);
     }).catch(() => {
