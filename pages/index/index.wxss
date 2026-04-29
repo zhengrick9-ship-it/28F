@@ -389,27 +389,12 @@ page {
   gap: 6rpx;
 }
 
-.dish-title-row {
-  min-width: 0;
-  display: flex;
-  align-items: baseline;
-  gap: 10rpx;
-}
-
 .dish-name {
   min-width: 0;
   color: #1d1d1f;
   font-size: 29rpx;
   font-weight: 650;
   line-height: 1.28;
-}
-
-.dish-cal-inline {
-  flex-shrink: 0;
-  color: #8e8e93;
-  font-size: 21rpx;
-  font-weight: 650;
-  line-height: 1.2;
 }
 
 .macro-row {
@@ -424,7 +409,7 @@ page {
 }
 
 .macro {
-  font-size: 20rpx;
+  font-size: 21rpx;
   font-weight: 750;
   line-height: 1;
   white-space: nowrap;
@@ -432,6 +417,12 @@ page {
 
 .macro.calories {
   color: #8e8e93;
+}
+
+.macro-sep {
+  color: rgba(60, 60, 67, 0.24);
+  font-size: 20rpx;
+  line-height: 1;
 }
 
 .macro.protein {
