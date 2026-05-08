@@ -43,12 +43,16 @@ function postJson(url, headers, body, timeoutMs) {
 
 function parseJsonFromText(text) {
   const trimmed = String(text || '').trim();
+  if (/^"dishIds"\s*:/.test(trimmed)) {
+    return JSON.parse(`{${trimmed}`);
+  }
   try {
     return JSON.parse(trimmed);
   } catch (error) {
     const fenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
     if (fenceMatch) return JSON.parse(fenceMatch[1].trim());
-    const match = trimmed.match(/\{[\s\S]*\}/);
+
+    const match = trimmed.match(/\{[\s\S]*?"dishIds"[\s\S]*?\}/);
     if (!match) throw error;
     return JSON.parse(match[0]);
   }
@@ -221,20 +225,15 @@ exports.main = async event => {
   const mode = event.mode || 'balanced';
   const modeLabel = MODE_LABELS[mode] || '均衡';
   const prompt = [
-    `你是公司食堂点餐推荐助手。请只从给定菜品中推荐 2-4 个菜。`,
-    `你的输出必须是严格 JSON，第一字符必须是 {，最后一个字符必须是 }。`,
-    `不要输出英文思考过程，不要输出 Markdown，不要输出代码块，不要解释。`,
+    `你是公司食堂点餐推荐助手，只能返回 JSON。`,
+    `禁止输出分析、推理、Markdown、代码块、解释、英文前缀。`,
     `日期：${event.date || ''} ${event.weekday || ''}`,
     `餐次：${event.mealLabel || event.mealKey || ''}`,
     `推荐模式：${modeLabel}`,
-    `要求：`,
-    `- 低卡：优先低热量、蔬菜、汤品，少油炸糕点。`,
-    `- 高蛋白：优先肉蛋豆制品，兼顾一个主食或蔬菜。`,
-    `- 均衡：主食、蛋白、蔬菜/汤/水果尽量搭配。`,
-    `- 随机：可以更随意，但仍需能组成一餐。`,
-    `- 只能返回菜品 id，不要虚构菜品。`,
+    `低卡优先低热量、蔬菜、汤品；高蛋白优先肉蛋豆制品；均衡兼顾主食、蛋白、蔬菜；随机可更随意。`,
+    `只能使用菜品 JSON 中存在的 id，不要虚构菜品。`,
     `菜品 JSON：${JSON.stringify(dishPayload)}`,
-    `只输出这个结构：{"dishIds":["id1","id2"],"reason":"一句话说明"}`
+    `返回字段：dishIds 字符串数组，reason 一句话中文说明。`
   ].join('\n');
 
   const url = `${baseUrl.replace(/\/$/, '')}/v1/messages`;
@@ -252,6 +251,10 @@ exports.main = async event => {
         {
           role: 'user',
           content: prompt
+        },
+        {
+          role: 'assistant',
+          content: '{'
         }
       ]
     }, timeoutMs);
@@ -265,7 +268,8 @@ exports.main = async event => {
     };
   }
 
-  const text = findJsonText(response) || extractResponseText(response);
+  const rawText = findJsonText(response) || extractResponseText(response);
+  const text = /^"dishIds"\s*:/.test(rawText.trim()) ? `{${rawText.trim()}` : rawText;
   let parsed;
   try {
     parsed = parseJsonFromText(text);
