@@ -46,6 +46,8 @@ function parseJsonFromText(text) {
   try {
     return JSON.parse(trimmed);
   } catch (error) {
+    const fenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    if (fenceMatch) return JSON.parse(fenceMatch[1].trim());
     const match = trimmed.match(/\{[\s\S]*\}/);
     if (!match) throw error;
     return JSON.parse(match[0]);
@@ -137,6 +139,63 @@ function responseShape(response) {
   return shape;
 }
 
+function getCategoryType(category) {
+  const stapleCats = ['粥品', '主食', '西点', '面食', '饮品'];
+  const proteinCats = ['荤菜', '蛋类', '堂烹面臊', '特色菜', '特色套餐'];
+  const vegCats = ['素菜', '养生蔬菜', '水果', '汤品', '粗粮'];
+  if (stapleCats.includes(category)) return 'staple';
+  if (proteinCats.includes(category)) return 'protein';
+  if (vegCats.includes(category)) return 'vegetable';
+  return 'other';
+}
+
+function recommendByRule(dishes, mode) {
+  if (mode === 'random') {
+    return dishes
+      .slice()
+      .sort(() => Math.random() - 0.5)
+      .slice(0, Math.min(4, Math.max(2, dishes.length)))
+      .map(dish => dish.id);
+  }
+
+  const byType = { staple: [], protein: [], vegetable: [], other: [] };
+  dishes.forEach(dish => byType[getCategoryType(dish.category)].push(dish));
+
+  const calories = dish => Number(dish.kcalPer100g) || 0;
+  const protein = dish => Number(dish.macrosPer100g && dish.macrosPer100g.protein) || 0;
+  const pick = list => list.length ? list[0] : null;
+  const picked = [];
+
+  const staplePool = byType.staple.slice().sort((a, b) => calories(a) - calories(b));
+  const proteinPool = byType.protein.slice().sort((a, b) => mode === 'highProtein' ? protein(b) - protein(a) : calories(a) - calories(b));
+  const vegPool = byType.vegetable.slice().sort((a, b) => calories(a) - calories(b));
+
+  if (mode !== 'lowCal') {
+    const staple = pick(staplePool);
+    if (staple) picked.push(staple);
+  }
+
+  const mainProtein = pick(proteinPool);
+  const vegetable = pick(vegPool);
+  if (mainProtein) picked.push(mainProtein);
+  if (vegetable) picked.push(vegetable);
+
+  if (picked.length < 3 && mode !== 'lowCal') {
+    const nextProtein = proteinPool.find(dish => !picked.includes(dish));
+    if (nextProtein) picked.push(nextProtein);
+  }
+
+  if (mode === 'lowCal') {
+    return dishes
+      .slice()
+      .sort((a, b) => calories(a) - calories(b))
+      .slice(0, Math.min(3, dishes.length))
+      .map(dish => dish.id);
+  }
+
+  return picked.slice(0, 4).map(dish => dish.id);
+}
+
 exports.main = async event => {
   const token = process.env.ANTHROPIC_AUTH_TOKEN || process.env.MINIMAX_API_KEY;
   const baseUrl = process.env.ANTHROPIC_BASE_URL || 'https://api.minimaxi.com/anthropic';
@@ -164,6 +223,8 @@ exports.main = async event => {
   const modeLabel = MODE_LABELS[mode] || '均衡';
   const prompt = [
     `你是公司食堂点餐推荐助手。请只从给定菜品中推荐 2-4 个菜。`,
+    `你的输出必须是严格 JSON，第一字符必须是 {，最后一个字符必须是 }。`,
+    `不要输出英文思考过程，不要输出 Markdown，不要输出代码块，不要解释。`,
     `日期：${event.date || ''} ${event.weekday || ''}`,
     `餐次：${event.mealLabel || event.mealKey || ''}`,
     `推荐模式：${modeLabel}`,
@@ -174,7 +235,7 @@ exports.main = async event => {
     `- 随机：可以更随意，但仍需能组成一餐。`,
     `- 只能返回菜品 id，不要虚构菜品。`,
     `菜品 JSON：${JSON.stringify(dishPayload)}`,
-    `输出严格 JSON：{"dishIds":["id1","id2"],"reason":"一句话说明"}`
+    `只输出这个结构：{"dishIds":["id1","id2"],"reason":"一句话说明"}`
   ].join('\n');
 
   const url = `${baseUrl.replace(/\/$/, '')}/v1/messages`;
@@ -210,13 +271,17 @@ exports.main = async event => {
   try {
     parsed = parseJsonFromText(text);
   } catch (error) {
+    const ruleDishIds = recommendByRule(dishes, mode);
     return {
-      ok: false,
+      ok: ruleDishIds.length > 0,
       error: 'ai_json_parse_failed',
       message: String(error.message || error).slice(0, 240),
       model,
       responseShape: responseShape(response),
-      textPreview: text.slice(0, 120)
+      textPreview: text.slice(0, 120),
+      dishIds: ruleDishIds,
+      reason: `${modeLabel}模式推荐；AI 返回格式异常，已用云端规则兜底`,
+      source: '云端推荐'
     };
   }
   const allowedIds = new Set(dishes.map(dish => dish.id));
