@@ -52,6 +52,51 @@ function parseJsonFromText(text) {
   }
 }
 
+function extractResponseText(response) {
+  if (!response) return '';
+
+  if (typeof response.content === 'string') {
+    return response.content;
+  }
+
+  if (Array.isArray(response.content)) {
+    return response.content.map(part => {
+      if (typeof part === 'string') return part;
+      return part.text || part.content || '';
+    }).join('');
+  }
+
+  if (response.output_text) {
+    return response.output_text;
+  }
+
+  if (Array.isArray(response.choices) && response.choices.length > 0) {
+    const choice = response.choices[0];
+    if (choice.message && typeof choice.message.content === 'string') {
+      return choice.message.content;
+    }
+    if (typeof choice.text === 'string') {
+      return choice.text;
+    }
+  }
+
+  return response.text || '';
+}
+
+function responseShape(response) {
+  if (!response || typeof response !== 'object') return typeof response;
+  const shape = {};
+  Object.keys(response).slice(0, 12).forEach(key => {
+    const value = response[key];
+    if (Array.isArray(value)) {
+      shape[key] = `array(${value.length})`;
+    } else {
+      shape[key] = typeof value;
+    }
+  });
+  return shape;
+}
+
 exports.main = async event => {
   const token = process.env.ANTHROPIC_AUTH_TOKEN || process.env.MINIMAX_API_KEY;
   const baseUrl = process.env.ANTHROPIC_BASE_URL || 'https://api.minimaxi.com/anthropic';
@@ -120,9 +165,7 @@ exports.main = async event => {
     };
   }
 
-  const text = Array.isArray(response.content)
-    ? response.content.map(part => part.text || '').join('')
-    : response.text || '';
+  const text = extractResponseText(response);
   let parsed;
   try {
     parsed = parseJsonFromText(text);
@@ -131,7 +174,9 @@ exports.main = async event => {
       ok: false,
       error: 'ai_json_parse_failed',
       message: String(error.message || error).slice(0, 240),
-      model
+      model,
+      responseShape: responseShape(response),
+      textPreview: text.slice(0, 120)
     };
   }
   const allowedIds = new Set(dishes.map(dish => dish.id));
