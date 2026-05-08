@@ -93,26 +93,47 @@ exports.main = async event => {
   ].join('\n');
 
   const url = `${baseUrl.replace(/\/$/, '')}/v1/messages`;
-  const response = await postJson(url, {
-    'x-api-key': token,
-    authorization: `Bearer ${token}`,
-    'anthropic-version': '2023-06-01'
-  }, {
-    model,
-    max_tokens: 600,
-    temperature: mode === 'random' ? 0.9 : 0.35,
-    messages: [
-      {
-        role: 'user',
-        content: prompt
-      }
-    ]
-  }, timeoutMs);
+  let response;
+  try {
+    response = await postJson(url, {
+      'x-api-key': token,
+      authorization: `Bearer ${token}`,
+      'anthropic-version': '2023-06-01'
+    }, {
+      model,
+      max_tokens: 600,
+      temperature: mode === 'random' ? 0.9 : 0.35,
+      messages: [
+        {
+          role: 'user',
+          content: prompt
+        }
+      ]
+    }, timeoutMs);
+  } catch (error) {
+    return {
+      ok: false,
+      error: 'ai_request_failed',
+      message: String(error.message || error).slice(0, 240),
+      model,
+      endpoint: baseUrl.replace(/\/$/, '')
+    };
+  }
 
   const text = Array.isArray(response.content)
     ? response.content.map(part => part.text || '').join('')
     : response.text || '';
-  const parsed = parseJsonFromText(text);
+  let parsed;
+  try {
+    parsed = parseJsonFromText(text);
+  } catch (error) {
+    return {
+      ok: false,
+      error: 'ai_json_parse_failed',
+      message: String(error.message || error).slice(0, 240),
+      model
+    };
+  }
   const allowedIds = new Set(dishes.map(dish => dish.id));
   const dishIds = (parsed.dishIds || []).filter(id => allowedIds.has(id)).slice(0, 4);
 
@@ -120,6 +141,7 @@ exports.main = async event => {
     ok: dishIds.length > 0,
     dishIds,
     reason: parsed.reason || `${modeLabel}模式推荐`,
-    source: 'AI'
+    source: 'AI',
+    model
   };
 };
