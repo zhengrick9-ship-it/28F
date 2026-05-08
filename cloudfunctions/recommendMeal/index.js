@@ -60,10 +60,7 @@ function extractResponseText(response) {
   }
 
   if (Array.isArray(response.content)) {
-    return response.content.map(part => {
-      if (typeof part === 'string') return part;
-      return part.text || part.content || '';
-    }).join('');
+    return response.content.map(part => extractTextFromValue(part)).join('');
   }
 
   if (response.output_text) {
@@ -81,6 +78,49 @@ function extractResponseText(response) {
   }
 
   return response.text || '';
+}
+
+function extractTextFromValue(value) {
+  if (!value) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value !== 'object') return '';
+
+  const direct = value.text || value.content || value.output_text;
+  if (typeof direct === 'string') return direct;
+  if (direct && typeof direct === 'object') return extractTextFromValue(direct);
+
+  if (Array.isArray(value)) {
+    return value.map(item => extractTextFromValue(item)).join('');
+  }
+
+  const jsonLike = [];
+  Object.keys(value).forEach(key => {
+    const text = extractTextFromValue(value[key]);
+    if (text) jsonLike.push(text);
+  });
+
+  return jsonLike.join('');
+}
+
+function findJsonText(value) {
+  const candidates = [];
+
+  function walk(item) {
+    if (!item) return;
+    if (typeof item === 'string') {
+      if (item.includes('dishIds') || item.includes('{')) candidates.push(item);
+      return;
+    }
+    if (typeof item !== 'object') return;
+    if (Array.isArray(item)) {
+      item.forEach(walk);
+      return;
+    }
+    Object.keys(item).forEach(key => walk(item[key]));
+  }
+
+  walk(value);
+  return candidates.find(text => text.includes('dishIds')) || candidates[0] || '';
 }
 
 function responseShape(response) {
@@ -165,7 +205,7 @@ exports.main = async event => {
     };
   }
 
-  const text = extractResponseText(response);
+  const text = extractResponseText(response) || findJsonText(response);
   let parsed;
   try {
     parsed = parseJsonFromText(text);
