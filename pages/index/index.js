@@ -65,6 +65,13 @@ function hasUsableNutritionMeta(menuWeeks) {
   return total > 0 && withMeta / total > 0.8;
 }
 
+function latestEndDate(menuWeeks) {
+  return (menuWeeks || []).reduce((latest, week) => {
+    const endDate = week && week.endDate ? week.endDate : '';
+    return endDate > latest ? endDate : latest;
+  }, '');
+}
+
 Page({
   data: {
     weekOptions: [],
@@ -150,7 +157,10 @@ Page({
       const result = res && res.result ? res.result : {};
       const remoteWeeks = result.weeks;
       if (Array.isArray(remoteWeeks) && remoteWeeks.length > 0) {
-        if (result.nutritionSource || hasUsableNutritionMeta(remoteWeeks)) {
+        const remoteIsCurrent = latestEndDate(remoteWeeks) >= latestEndDate(localWeeks);
+        if (!remoteIsCurrent) {
+          this.setData({ cloudStatus: '云端菜单较旧，使用本地菜单' });
+        } else if (result.nutritionSource || hasUsableNutritionMeta(remoteWeeks)) {
           this.initWeeks(remoteWeeks, '已同步云端菜单');
         } else {
           this.setData({ cloudStatus: '云端菜单营养数据较旧，使用本地菜单' });
