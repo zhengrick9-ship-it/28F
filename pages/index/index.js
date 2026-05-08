@@ -24,6 +24,7 @@ const PREFERRED_CATEGORY_ORDER = [
 ];
 
 const LOCAL_MENU_IMAGE_URLS_BY_WEEK = {
+  '5.6-5.9': ['/assets/menu-previews/20260508-5.6-5.9.jpg'],
   '4.27-4.30': ['/assets/menu-previews/20260429-112251.jpg'],
   '4.20-4.24': ['/assets/menu-previews/20260429-111354.jpg']
 };

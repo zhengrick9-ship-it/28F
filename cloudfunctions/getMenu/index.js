@@ -5,6 +5,7 @@ exports.main = async () => ({
   nutritionSource: 'dish-name-and-ingredient-estimator',
   menuImageUrlsByWeek: {},
   menuImageFileIdsByWeek: {
+    '5.6-5.9': [],
     '4.27-4.30': [],
     '4.20-4.24': []
   },

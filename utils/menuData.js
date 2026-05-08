@@ -19,6 +19,10 @@ function dish(id, name, category, kcalPer100g) {
   return { id, name, category, ...estimateDishNutrition(name, category, kcalPer100g) };
 }
 
+function dishList(prefix, category, names, kcalPer100g) {
+  return names.map((name, index) => dish(`${prefix}-${index + 1}`, name, category, kcalPer100g));
+}
+
 // Week 1: 2026-04-20 to 2026-04-24
 const week1 = {
   label: '4.20-4.24',
@@ -525,7 +529,145 @@ const week2 = {
   ]
 };
 
-const weeks = [week1, week2];
+// Week 3: 2026-05-06 to 2026-05-09
+const week3 = {
+  label: '5.6-5.9',
+  startDate: d(2026, 5, 6),
+  endDate: d(2026, 5, 9),
+  days: [
+    {
+      date: d(2026, 5, 6),
+      weekday: '周三',
+      weekdayIndex: 2,
+      meals: {
+        breakfast: [
+          ...dishList('w3-wed-b-porridge', '粥品', ['红薯粥'], 52),
+          ...dishList('w3-wed-b-staple', '主食', ['芽菜肉包', '白面馒头', '肉松花卷'], 235),
+          ...dishList('w3-wed-b-pastry', '西点', ['香橙蛋糕', '奶香馒头面包'], 300),
+          ...dishList('w3-wed-b-egg', '蛋类', ['卤鸡蛋', '白水蛋'], 150),
+          ...dishList('w3-wed-b-veg', '养生蔬菜', ['香菜萝卜丝', '炝炒豆芽', '炒大白菜', '蒜泥汉菜'], 50),
+          ...dishList('w3-wed-b-grain', '粗粮', ['蒸玉米'], 105),
+          ...dishList('w3-wed-b-drink', '饮品', ['核桃花生豆浆', '果蔬汁', '纯牛奶', '花生奶'], 58),
+          ...dishList('w3-wed-b-noodle-topping', '堂烹面臊', ['红烧牛肉', '豌杂'], 205),
+          ...dishList('w3-wed-b-noodle', '面食', ['面2款', '粉2款'], 135)
+        ],
+        lunch: [
+          ...dishList('w3-wed-l-special', '特色菜', ['鲜笋酸菜鸡'], 175),
+          ...dishList('w3-wed-l-meat', '荤菜', ['豆筋烧排骨', '蒜泥白肉', '香菇肉片', '五彩虾仁蒸蛋'], 185),
+          ...dishList('w3-wed-l-veg', '素菜', ['小炒有机花菜', '酸辣凉粉', '炒瓢儿白'], 68),
+          ...dishList('w3-wed-l-fruit', '水果', ['枇杷'], 45),
+          ...dishList('w3-wed-l-snack', '小吃', ['三大炮'], 260),
+          ...dishList('w3-wed-l-soup', '汤品', ['薏米红豆龙骨汤'], 58),
+          ...dishList('w3-wed-l-staple', '主食', ['芽菜肉末炒饭', '面条', '白米饭', '米线'], 145)
+        ],
+        dinner: [
+          ...dishList('w3-wed-d-meat', '荤菜', ['青椒回锅肉', '高笋肉片'], 205),
+          ...dishList('w3-wed-d-veg', '素菜', ['醋溜大白菜', '蒜泥菠菜'], 50),
+          ...dishList('w3-wed-d-noodle', '面食', ['面2款', '粉2款'], 135)
+        ]
+      }
+    },
+    {
+      date: d(2026, 5, 7),
+      weekday: '周四',
+      weekdayIndex: 3,
+      meals: {
+        breakfast: [
+          ...dishList('w3-thu-b-porridge', '粥品', ['薏仁粥'], 62),
+          ...dishList('w3-thu-b-staple', '主食', ['鲜肉包', '麦麸馒头', '葱花花卷'], 235),
+          ...dishList('w3-thu-b-pastry', '西点', ['橙香软欧', '香蕉蛋糕'], 300),
+          ...dishList('w3-thu-b-egg', '蛋类', ['煎鸡蛋', '白水蛋'], 150),
+          ...dishList('w3-thu-b-veg', '养生蔬菜', ['红油豆干', '炒土耳瓜丝', '炒莲白', '炒菜心'], 55),
+          ...dishList('w3-thu-b-grain', '粗粮', ['蒸红薯'], 90),
+          ...dishList('w3-thu-b-drink', '饮品', ['黑豆豆浆', '果蔬汁', '纯牛奶', '花生奶'], 55),
+          ...dishList('w3-thu-b-noodle-topping', '堂烹面臊', ['酸菜肉丝', '豌杂'], 195),
+          ...dishList('w3-thu-b-noodle', '面食', ['面2款', '粉2款', '抄手'], 140)
+        ],
+        lunch: [
+          ...dishList('w3-thu-l-special', '特色菜', ['麻辣水煮鱼'], 165),
+          ...dishList('w3-thu-l-meat', '荤菜', ['小炒猪头肉', '土豆回锅肉', '双椒棒菜肉丝', '家常豆腐'], 190),
+          ...dishList('w3-thu-l-veg', '素菜', ['炝炒土豆丝', '炝拌瓜条', '白灼凤尾'], 65),
+          ...dishList('w3-thu-l-fruit', '水果', ['枇杷'], 45),
+          ...dishList('w3-thu-l-snack', '小吃', ['南瓜流心球'], 260),
+          ...dishList('w3-thu-l-soup', '汤品', ['桃胶红枣银耳汤'], 45),
+          ...dishList('w3-thu-l-staple', '主食', ['玉米碎米饭', '白米饭', '面条', '米线', '抄手'], 145)
+        ],
+        dinner: [
+          ...dishList('w3-thu-d-set', '特色套餐', ['大邑肥肠血旺'], 210),
+          ...dishList('w3-thu-d-meat', '荤菜', ['啤酒鸭', '酱肉丝'], 205),
+          ...dishList('w3-thu-d-veg', '素菜', ['莲白粉丝', '炒小白菜'], 65),
+          ...dishList('w3-thu-d-noodle', '面食', ['面2款', '粉2款', '抄手'], 140)
+        ]
+      }
+    },
+    {
+      date: d(2026, 5, 8),
+      weekday: '周五',
+      weekdayIndex: 4,
+      meals: {
+        breakfast: [
+          ...dishList('w3-fri-b-porridge', '粥品', ['八宝粥'], 68),
+          ...dishList('w3-fri-b-staple', '主食', ['大葱肉包', '玉米馒头', '黑芝麻花卷'], 235),
+          ...dishList('w3-fri-b-pastry', '西点', ['肉松蛋糕卷', '椰蓉面包'], 305),
+          ...dishList('w3-fri-b-egg', '蛋类', ['红糖醪糟蛋', '白水蛋'], 145),
+          ...dishList('w3-fri-b-veg', '养生蔬菜', ['红油三丝', '豆芽粉条', '炒西兰花', '炒瓢儿白'], 60),
+          ...dishList('w3-fri-b-grain', '粗粮', ['蒸花生'], 290),
+          ...dishList('w3-fri-b-drink', '饮品', ['黑芝麻豆浆', '果蔬汁', '纯牛奶', '花生奶'], 58),
+          ...dishList('w3-fri-b-noodle-topping', '堂烹面臊', ['鸡杂', '杂酱'], 190),
+          ...dishList('w3-fri-b-noodle', '面食', ['面2款', '粉2款'], 135)
+        ],
+        lunch: [
+          ...dishList('w3-fri-l-special', '特色菜', ['盐焗鸡'], 195),
+          ...dishList('w3-fri-l-meat', '荤菜', ['泡椒兔丁', '火爆肝腰', '宫保肉丁', '腰子豆花'], 185),
+          ...dishList('w3-fri-l-veg', '素菜', ['豇豆茄子', '白油丝瓜', '香菇菜心'], 62),
+          ...dishList('w3-fri-l-fruit', '水果', ['小番茄'], 22),
+          ...dishList('w3-fri-l-snack', '小吃', ['蒸饺'], 210),
+          ...dishList('w3-fri-l-soup', '汤品', ['绿豆南瓜汤'], 45),
+          ...dishList('w3-fri-l-staple', '主食', ['扬州炒饭', '面条', '白米饭', '米线'], 145)
+        ],
+        dinner: [
+          ...dishList('w3-fri-d-meat', '荤菜', ['小煎鸡', '鱼香肉丝'], 195),
+          ...dishList('w3-fri-d-veg', '素菜', ['青椒地瓜', '炒软江叶'], 55),
+          ...dishList('w3-fri-d-noodle', '面食', ['面2款', '粉2款'], 135)
+        ]
+      }
+    },
+    {
+      date: d(2026, 5, 9),
+      weekday: '周六',
+      weekdayIndex: 5,
+      meals: {
+        breakfast: [
+          ...dishList('w3-sat-b-porridge', '粥品', ['红豆粥'], 60),
+          ...dishList('w3-sat-b-staple', '主食', ['酱肉包', '白面馒头', '椒盐花卷'], 235),
+          ...dishList('w3-sat-b-pastry', '西点', ['丹麦烤肠', '纸杯蛋糕'], 310),
+          ...dishList('w3-sat-b-egg', '蛋类', ['煎蛋', '白水蛋'], 150),
+          ...dishList('w3-sat-b-veg', '养生蔬菜', ['红油折耳根', '炒土豆片', '糊辣藕丁', '炒下锅耙'], 65),
+          ...dishList('w3-sat-b-grain', '粗粮', ['蒸山药'], 55),
+          ...dishList('w3-sat-b-drink', '饮品', ['红豆豆浆', '果蔬汁', '纯牛奶', '花生奶'], 58),
+          ...dishList('w3-sat-b-noodle-topping', '堂烹面臊', ['红烧肥肠', '杂酱'], 220),
+          ...dishList('w3-sat-b-noodle', '面食', ['面2款', '粉2款'], 135)
+        ],
+        lunch: [
+          ...dishList('w3-sat-l-special', '特色菜', ['青笋鱼香肘子'], 210),
+          ...dishList('w3-sat-l-meat', '荤菜', ['水煮牛肉', '山药木耳肉片', '泡椒鸡杂', '肉末豌豆'], 185),
+          ...dishList('w3-sat-l-veg', '素菜', ['耙耙菜', '酱爆莲白', '炝炒上海青'], 60),
+          ...dishList('w3-sat-l-fruit', '水果', ['枇杷'], 45),
+          ...dishList('w3-sat-l-snack', '小吃', ['红薯饼'], 230),
+          ...dishList('w3-sat-l-soup', '汤品', ['番茄煎蛋汤'], 45),
+          ...dishList('w3-sat-l-staple', '主食', ['小米蒸饭', '面条', '白米饭', '米线'], 145)
+        ],
+        dinner: [
+          ...dishList('w3-sat-d-meat', '荤菜', ['小土豆烧月牙骨', '鸡丝凉面'], 205),
+          ...dishList('w3-sat-d-veg', '素菜', ['炒南瓜丝', '蚝油生菜'], 55),
+          ...dishList('w3-sat-d-noodle', '面食', ['面2款', '粉2款'], 135)
+        ]
+      }
+    }
+  ]
+};
+
+const weeks = [week1, week2, week3];
 
 function getDefaultGrams(category) {
   switch (category) {
