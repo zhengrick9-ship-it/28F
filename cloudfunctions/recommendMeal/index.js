@@ -87,6 +87,10 @@ function extractTextFromValue(value) {
   if (typeof value === 'string') return value;
   if (typeof value !== 'object') return '';
 
+  if (value.type && value.type !== 'text' && !value.text && !value.content) {
+    return '';
+  }
+
   const direct = value.text || value.content || value.output_text;
   if (typeof direct === 'string') return direct;
   if (direct && typeof direct === 'object') return extractTextFromValue(direct);
@@ -95,13 +99,7 @@ function extractTextFromValue(value) {
     return value.map(item => extractTextFromValue(item)).join('');
   }
 
-  const jsonLike = [];
-  Object.keys(value).forEach(key => {
-    const text = extractTextFromValue(value[key]);
-    if (text) jsonLike.push(text);
-  });
-
-  return jsonLike.join('');
+  return '';
 }
 
 function findJsonText(value) {
@@ -110,7 +108,8 @@ function findJsonText(value) {
   function walk(item) {
     if (!item) return;
     if (typeof item === 'string') {
-      if (item.includes('dishIds') || item.includes('{')) candidates.push(item);
+      const text = item.trim();
+      if (text.includes('dishIds') || text.includes('{"') || text.startsWith('{')) candidates.push(text);
       return;
     }
     if (typeof item !== 'object') return;
@@ -266,7 +265,7 @@ exports.main = async event => {
     };
   }
 
-  const text = extractResponseText(response) || findJsonText(response);
+  const text = findJsonText(response) || extractResponseText(response);
   let parsed;
   try {
     parsed = parseJsonFromText(text);
