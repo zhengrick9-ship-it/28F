@@ -55,7 +55,7 @@
   <view wx:if="{{recommendation}}" class="recommendation-card">
     <view class="card-header">
       <text class="card-title">推荐搭配</text>
-      <text class="card-source">{{recommendation.source}}</text>
+      <text class="card-source" bindtap="openRecommendationChat">{{recommendation.source}}</text>
     </view>
     <view wx:if="{{recommendation.reason}}" class="rec-reason">{{recommendation.reason}}</view>
     <view class="rec-list">
@@ -156,6 +156,31 @@
     <view wx:if="{{selectedItems.length > 0}}" class="summary-detail">
       <view wx:for="{{selectedItems}}" wx:key="id" class="detail-row">
         <text class="detail-text">{{item.mealLabel}} · {{item.name}} {{item.grams}}g = {{item.calories}}千卡</text>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{chatVisible}}" class="chat-overlay" bindtap="closeRecommendationChat">
+    <view class="chat-panel" catchtap="noop">
+      <view class="chat-head">
+        <text class="chat-title">继续问 AI</text>
+        <text class="chat-close" bindtap="closeRecommendationChat">关闭</text>
+      </view>
+      <scroll-view scroll-y class="chat-list" scroll-into-view="{{chatScrollIntoView}}">
+        <view wx:for="{{chatMessages}}" wx:key="id" id="{{item.id}}" class="chat-message {{item.role}}">
+          <text>{{item.text}}</text>
+        </view>
+      </scroll-view>
+      <view class="chat-input-row">
+        <input
+          class="chat-input"
+          value="{{chatInput}}"
+          bindinput="onChatInput"
+          confirm-type="send"
+          bindconfirm="sendRecommendationChat"
+          placeholder="比如：不想吃这道，换一个"
+        />
+        <view class="chat-send {{chatLoading ? 'disabled' : ''}}" bindtap="sendRecommendationChat">发送</view>
       </view>
     </view>
   </view>

@@ -247,15 +247,20 @@ exports.main = async event => {
 
   const mode = event.mode || 'balanced';
   const modeLabel = MODE_LABELS[mode] || '均衡';
+  const currentRecommendation = Array.isArray(event.currentRecommendation) ? event.currentRecommendation : [];
+  const userMessage = event.userMessage || '';
   const prompt = [
     `你是公司食堂点餐推荐助手。请调用 recommend_dishes 工具返回推荐。`,
     `日期：${event.date || ''} ${event.weekday || ''}`,
     `餐次：${event.mealLabel || event.mealKey || ''}`,
     `推荐模式：${modeLabel}`,
+    userMessage ? `用户追问：${userMessage}` : '',
+    currentRecommendation.length ? `当前推荐菜品 JSON：${JSON.stringify(currentRecommendation)}` : '',
     `低卡优先低热量、蔬菜、汤品；高蛋白优先肉蛋豆制品；均衡兼顾主食、蛋白、蔬菜；随机可更随意。`,
+    userMessage ? `如果用户表达不想吃某道菜，请避开该菜并换成同餐次其他合适菜品。` : '',
     `只能使用菜品 JSON 中存在的 id，不要虚构菜品。`,
     `菜品 JSON：${JSON.stringify(dishPayload)}`
-  ].join('\n');
+  ].filter(Boolean).join('\n');
 
   const url = `${baseUrl.replace(/\/$/, '')}/v1/messages`;
   let response;

@@ -95,6 +95,11 @@ Page({
     totalCarbs: 0,
     totalFat: 0,
     recommendation: null,
+    chatVisible: false,
+    chatInput: '',
+    chatLoading: false,
+    chatMessages: [],
+    chatScrollIntoView: '',
     notice: '',
     weekRangeText: '',
     cloudStatus: '使用本地菜单'
@@ -596,6 +601,122 @@ Page({
         source,
         reason: reason || '按餐次、主食、蛋白和蔬菜做搭配'
       }
+    });
+  },
+
+  openRecommendationChat() {
+    if (!this.data.recommendation || !this.data.recommendation.dishes || !this.data.recommendation.dishes.length) {
+      wx.showToast({
+        title: '请先生成推荐',
+        icon: 'none'
+      });
+      return;
+    }
+
+    const names = this.data.recommendation.dishes.map(item => item.name).join('、');
+    this.setData({
+      chatVisible: true,
+      chatMessages: [
+        {
+          id: 'chat-0',
+          role: 'assistant',
+          text: `当前推荐是：${names}。可以告诉我不想吃哪一道，或想低卡/高蛋白一点。`
+        }
+      ],
+      chatScrollIntoView: 'chat-0'
+    });
+  },
+
+  closeRecommendationChat() {
+    this.setData({ chatVisible: false, chatInput: '' });
+  },
+
+  noop() {},
+
+  onChatInput(e) {
+    this.setData({ chatInput: e.detail.value });
+  },
+
+  sendRecommendationChat() {
+    const message = (this.data.chatInput || '').trim();
+    if (!message || this.data.chatLoading) return;
+
+    const userMessage = {
+      id: `chat-${Date.now()}`,
+      role: 'user',
+      text: message
+    };
+    const loadingMessage = {
+      id: `chat-${Date.now()}-ai`,
+      role: 'assistant',
+      text: '正在调整推荐...'
+    };
+
+    this.setData({
+      chatInput: '',
+      chatLoading: true,
+      chatMessages: this.data.chatMessages.concat(userMessage, loadingMessage),
+      chatScrollIntoView: loadingMessage.id
+    });
+
+    this.runRecommendationChat(message, loadingMessage.id);
+  },
+
+  runRecommendationChat(userMessage, loadingMessageId) {
+    const weeks = this.data.menuWeeks;
+    const week = weeks[this.data.selectedWeekIndex];
+    const day = week.days[this.data.selectedDayIndex];
+    const mealKey = this.data.selectedMeal;
+    const dishes = day.meals[mealKey];
+    const currentRecommendation = (this.data.recommendation && this.data.recommendation.dishes || []).map(dish => ({
+      id: dish.id,
+      name: dish.name,
+      category: dish.category
+    }));
+
+    if (!wx.cloud || !wx.cloud.callFunction) {
+      this.finishRecommendationChat(dishes, null, loadingMessageId, '云函数不可用，已保留当前推荐');
+      return;
+    }
+
+    wx.cloud.callFunction({
+      name: 'recommendMeal',
+      data: {
+        mode: this.data.selectedRecommendMode,
+        mealKey,
+        mealLabel: mealLabels[mealKey],
+        date: day.date,
+        weekday: day.weekday,
+        dishes,
+        currentRecommendation,
+        userMessage
+      }
+    }).then(res => {
+      const result = res && res.result ? res.result : {};
+      if (result.ok && Array.isArray(result.dishIds) && result.dishIds.length > 0) {
+        this.applyRecommendationByIds(dishes, result.dishIds, result.reason || '已按你的偏好调整', result.source || 'AI');
+        this.finishRecommendationChat(dishes, result, loadingMessageId, result.reason || '已按你的偏好调整');
+        return;
+      }
+      this.finishRecommendationChat(dishes, null, loadingMessageId, '暂时没能调整，换个说法试试');
+    }).catch(() => {
+      this.finishRecommendationChat(dishes, null, loadingMessageId, 'AI 暂时不可用，稍后再试');
+    });
+  },
+
+  finishRecommendationChat(dishes, result, loadingMessageId, text) {
+    const messages = this.data.chatMessages.map(item => {
+      if (item.id !== loadingMessageId) return item;
+      return {
+        ...item,
+        text
+      };
+    });
+
+    this.setData({
+      chatLoading: false,
+      chatMessages: messages,
+      chatScrollIntoView: loadingMessageId
     });
   },
 
