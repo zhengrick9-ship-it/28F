@@ -227,6 +227,7 @@ exports.main = async event => {
   const baseUrl = process.env.ANTHROPIC_BASE_URL || 'https://api.minimaxi.com/anthropic';
   const model = process.env.ANTHROPIC_MODEL || 'MiniMax-M2.7-highspeed';
   const timeoutMs = Number(process.env.API_TIMEOUT_MS || 30000);
+  const maxTokens = Number(process.env.AI_MAX_TOKENS || 2048);
 
   if (!token) {
     return { ok: false, error: 'missing_ai_token' };
@@ -271,7 +272,7 @@ exports.main = async event => {
       'anthropic-version': '2023-06-01'
     }, {
       model,
-      max_tokens: 600,
+      max_tokens: maxTokens,
       temperature: mode === 'random' ? 0.9 : 0.35,
       tools: [
         {
@@ -329,6 +330,7 @@ exports.main = async event => {
       message: String(error.message || error).slice(0, 240),
       model,
       responseShape: responseShape(response),
+      stopReason: response && response.stop_reason,
       textPreview: text.slice(0, 120),
       dishIds: ruleDishIds,
       reason: `${modeLabel}模式推荐；AI 返回格式异常，已用云端规则兜底`,
