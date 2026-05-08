@@ -58,6 +58,29 @@ function parseJsonFromText(text) {
   }
 }
 
+function extractToolInput(response) {
+  let toolInput = null;
+
+  function walk(value) {
+    if (!value || toolInput) return;
+    if (Array.isArray(value)) {
+      value.forEach(walk);
+      return;
+    }
+    if (typeof value !== 'object') return;
+
+    if (value.type === 'tool_use' && value.name === 'recommend_dishes' && value.input) {
+      toolInput = value.input;
+      return;
+    }
+
+    Object.keys(value).forEach(key => walk(value[key]));
+  }
+
+  walk(response);
+  return toolInput;
+}
+
 function extractResponseText(response) {
   if (!response) return '';
 
@@ -91,7 +114,7 @@ function extractTextFromValue(value) {
   if (typeof value === 'string') return value;
   if (typeof value !== 'object') return '';
 
-  if (value.type && value.type !== 'text' && !value.text && !value.content) {
+  if (value.type && value.type !== 'text') {
     return '';
   }
 
@@ -225,15 +248,13 @@ exports.main = async event => {
   const mode = event.mode || 'balanced';
   const modeLabel = MODE_LABELS[mode] || '均衡';
   const prompt = [
-    `你是公司食堂点餐推荐助手，只能返回 JSON。`,
-    `禁止输出分析、推理、Markdown、代码块、解释、英文前缀。`,
+    `你是公司食堂点餐推荐助手。请调用 recommend_dishes 工具返回推荐。`,
     `日期：${event.date || ''} ${event.weekday || ''}`,
     `餐次：${event.mealLabel || event.mealKey || ''}`,
     `推荐模式：${modeLabel}`,
     `低卡优先低热量、蔬菜、汤品；高蛋白优先肉蛋豆制品；均衡兼顾主食、蛋白、蔬菜；随机可更随意。`,
     `只能使用菜品 JSON 中存在的 id，不要虚构菜品。`,
-    `菜品 JSON：${JSON.stringify(dishPayload)}`,
-    `返回字段：dishIds 字符串数组，reason 一句话中文说明。`
+    `菜品 JSON：${JSON.stringify(dishPayload)}`
   ].join('\n');
 
   const url = `${baseUrl.replace(/\/$/, '')}/v1/messages`;
@@ -247,14 +268,35 @@ exports.main = async event => {
       model,
       max_tokens: 600,
       temperature: mode === 'random' ? 0.9 : 0.35,
+      tools: [
+        {
+          name: 'recommend_dishes',
+          description: 'Return cafeteria dish ids and a short Chinese reason.',
+          input_schema: {
+            type: 'object',
+            properties: {
+              dishIds: {
+                type: 'array',
+                items: { type: 'string' },
+                minItems: 2,
+                maxItems: 4
+              },
+              reason: {
+                type: 'string'
+              }
+            },
+            required: ['dishIds', 'reason']
+          }
+        }
+      ],
+      tool_choice: {
+        type: 'tool',
+        name: 'recommend_dishes'
+      },
       messages: [
         {
           role: 'user',
           content: prompt
-        },
-        {
-          role: 'assistant',
-          content: '{'
         }
       ]
     }, timeoutMs);
@@ -268,7 +310,8 @@ exports.main = async event => {
     };
   }
 
-  const rawText = findJsonText(response) || extractResponseText(response);
+  const toolInput = extractToolInput(response);
+  const rawText = toolInput ? JSON.stringify(toolInput) : (findJsonText(response) || extractResponseText(response));
   const text = /^"dishIds"\s*:/.test(rawText.trim()) ? `{${rawText.trim()}` : rawText;
   let parsed;
   try {
