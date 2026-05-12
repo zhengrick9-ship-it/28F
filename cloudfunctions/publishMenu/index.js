@@ -5,6 +5,31 @@ cloud.init({
 });
 
 const db = cloud.database();
+const MENUS_COLLECTION = 'menus';
+
+function isMissingCollectionError(error) {
+  const text = `${error && error.errCode || ''} ${error && error.message || ''} ${error && error.errMsg || ''}`;
+  return text.includes('-502005') || text.includes('DATABASE_COLLECTION_NOT_EXIST') || text.includes('collection not exists');
+}
+
+async function ensureMenusCollection() {
+  try {
+    await db.collection(MENUS_COLLECTION).limit(1).get();
+  } catch (error) {
+    if (!isMissingCollectionError(error)) {
+      throw error;
+    }
+
+    try {
+      await db.createCollection(MENUS_COLLECTION);
+    } catch (createError) {
+      const text = `${createError && createError.errCode || ''} ${createError && createError.message || ''} ${createError && createError.errMsg || ''}`;
+      if (!text.includes('already') && !text.includes('exist')) {
+        throw createError;
+      }
+    }
+  }
+}
 
 function validateMenu(menu) {
   if (!menu || typeof menu !== 'object') return 'missing_menu';
@@ -53,8 +78,10 @@ exports.main = async event => {
     return { ok: false, error: validationError };
   }
 
+  await ensureMenusCollection();
+
   if (event.archiveExisting !== false) {
-    await db.collection('menus')
+    await db.collection(MENUS_COLLECTION)
       .where({ status: 'active' })
       .update({
         data: {
@@ -65,7 +92,7 @@ exports.main = async event => {
   }
 
   const data = normalizeMenu(menu);
-  const existing = await db.collection('menus')
+  const existing = await db.collection(MENUS_COLLECTION)
     .where({
       label: data.label,
       startDate: data.startDate
@@ -75,7 +102,7 @@ exports.main = async event => {
 
   if (existing.data && existing.data.length > 0) {
     const id = existing.data[0]._id;
-    await db.collection('menus').doc(id).update({ data });
+    await db.collection(MENUS_COLLECTION).doc(id).update({ data });
     return {
       ok: true,
       action: 'updated',
@@ -85,7 +112,7 @@ exports.main = async event => {
     };
   }
 
-  const res = await db.collection('menus').add({ data });
+  const res = await db.collection(MENUS_COLLECTION).add({ data });
   return {
     ok: true,
     action: 'created',
