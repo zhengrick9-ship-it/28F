@@ -180,13 +180,19 @@ Page({
   loadCloudMenuImages(result) {
     const imageUrlsByWeek = result && result.menuImageUrlsByWeek;
     if (imageUrlsByWeek && typeof imageUrlsByWeek === 'object') {
-      this.setData({
-        menuImageUrlsByWeek: {
-          ...this.data.menuImageUrlsByWeek,
-          ...imageUrlsByWeek
-        }
+      const labelsWithUrls = Object.keys(imageUrlsByWeek).filter(label => {
+        const urls = imageUrlsByWeek[label];
+        return Array.isArray(urls) && urls.length > 0;
       });
-      return;
+      if (labelsWithUrls.length > 0) {
+        this.setData({
+          menuImageUrlsByWeek: {
+            ...this.data.menuImageUrlsByWeek,
+            ...imageUrlsByWeek
+          }
+        });
+        return;
+      }
     }
 
     const fileIdsByWeek = result && result.menuImageFileIdsByWeek;
